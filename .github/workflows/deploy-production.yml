@@ -1,0 +1,90 @@
+name: Deploy Production to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual production deployment'
+        required: false
+        default: 'Manual trigger via GitHub Actions'
+
+# Enforce least-privilege permissions
+permissions:
+  contents: read
+  id-token: write # Required for Workload Identity Federation (OIDC)
+
+# Prevent concurrent production deployments from racing or corrupting state
+concurrency:
+  group: firebase-hosting-production
+  cancel-in-progress: false
+
+jobs:
+  build_and_deploy:
+    name: Build, Verify & Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies reproducibly
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --prefer-offline --no-audit
+          fi
+
+      - name: Run TypeScript type checks
+        run: npm run lint
+
+      - name: Run unit test suite
+        run: npm test
+
+      - name: Build production assets
+        run: npm run build
+
+      - name: Verify build output directory
+        run: |
+          if [ ! -d "dist" ] || [ ! -f "dist/index.html" ]; then
+            echo "::error::Build verification failed: dist/index.html does not exist."
+            exit 1
+          fi
+          echo "Build artifact verified: dist/ directory contains $(ls -1 dist | wc -l) entries."
+
+      # Authentication Path 1: Workload Identity Federation (Keyless OIDC - Preferred)
+      - name: Authenticate via Google Cloud Workload Identity Federation
+        id: wif_auth
+        if: "${{ secrets.WIF_PROVIDER != '' && secrets.WIF_SERVICE_ACCOUNT != '' }}"
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: 'access_token'
+
+      - name: Deploy to Firebase Hosting via WIF
+        if: "${{ steps.wif_auth.outcome == 'success' }}"
+        run: npx firebase-tools deploy --only hosting --project docpulse-ff978 --non-interactive
+
+      # Authentication Path 2: Dedicated Service Account Secret (Supported Fallback)
+      - name: Deploy to Firebase Hosting via Service Account Key
+        if: "${{ steps.wif_auth.outcome != 'success' }}"
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DOCPULSE_FF978 || secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: docpulse-ff978
