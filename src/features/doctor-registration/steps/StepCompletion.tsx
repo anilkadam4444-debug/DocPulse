@@ -107,6 +107,19 @@ export const StepCompletion: React.FC<StepCompletionProps> = ({
               {activeDuration} mins · ₹{clinic.consultationFee}
             </span>
           </div>
+          <div className="flex justify-between pb-1.5 border-b border-slate-200">
+            <span className="text-slate-500">Authentication:</span>
+            <span className="text-emerald-700 font-bold flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Active (Firebase Auth)
+            </span>
+          </div>
+          <div className="flex justify-between pb-1.5 border-b border-slate-200">
+            <span className="text-slate-500">Council Credentials:</span>
+            <span className="text-amber-800 font-semibold">
+              Pending Document Review
+            </span>
+          </div>
           <div className="flex justify-between">
             <span className="text-slate-500">30-Day Free Trial:</span>
             <span className="text-teal-700 font-bold">Activated (₹0 due today)</span>
@@ -139,14 +152,14 @@ export const StepCompletion: React.FC<StepCompletionProps> = ({
           </Link>
         </div>
 
-        {/* Transparent Prototype Notice */}
-        <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-900 max-w-md mx-auto text-left leading-relaxed flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+        {/* Live Authentication & Security Notice */}
+        <div className="p-3.5 bg-teal-50/90 border border-teal-200 rounded-xl text-xs text-teal-950 max-w-md mx-auto text-left leading-relaxed flex items-start gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
           <div>
-            <strong>Phase 2 Implementation Scope:</strong> As specified in the architecture, no live
-            database records or permanent authentication credentials have been created yet. In Step 3
-            and beyond, this onboarding payload will connect to Firebase Authentication and Cloud
-            Firestore tenant collections.
+            <strong>Doctor Tenant Live:</strong> Your account has been registered with Firebase Authentication.
+            An email verification link was sent to <strong>{account.email}</strong>. Please check your inbox.
+            In accordance with Indian medical practice compliance standards, medical registration credentials
+            are subject to administrative review before a public verified badge is displayed to patients.
           </div>
         </div>
 

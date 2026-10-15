@@ -25,6 +25,9 @@ interface StepReviewProps {
   onEditStep: (step: RegistrationStep) => void;
   onComplete: () => void;
   isSubmitting?: boolean;
+  submissionError?: string | null;
+  canRetryProfile?: boolean;
+  onRetryProfile?: () => void;
 }
 
 export const StepReview: React.FC<StepReviewProps> = ({
@@ -32,6 +35,9 @@ export const StepReview: React.FC<StepReviewProps> = ({
   onEditStep,
   onComplete,
   isSubmitting = false,
+  submissionError,
+  canRetryProfile,
+  onRetryProfile,
 }) => {
   const { account, professional, clinic, schedule } = formData;
   const capacity = calculateDailyCapacity(schedule);
@@ -51,15 +57,39 @@ export const StepReview: React.FC<StepReviewProps> = ({
         </p>
       </div>
 
-      {/* Prototype Context Banner */}
+      {/* Production Registration Banner */}
       <div className="p-3.5 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-950 flex items-start gap-2.5 leading-relaxed">
         <Sparkles className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
         <div>
-          <strong>Prototype Registration Review:</strong> This is a frontend architectural prototype.
-          Submitting this review validates the complete practice profile in memory. No live database
-          write, credentials verification, or email dispatch occurs until Phase 2.
+          <strong>Firebase Authentication &amp; Tenant Setup:</strong> Submitting creates your secure
+          doctor tenant account in Firebase Authentication, sends an email verification link to{' '}
+          <strong>{account.email}</strong>, and provisions your doctor profile in Cloud Firestore at{' '}
+          <code className="text-[11px] font-mono bg-teal-100/70 px-1 py-0.5 rounded">doctors/&#123;uid&#125;</code>.
+          Medical registration credentials will remain in pending verification status until verified.
         </div>
       </div>
+
+      {submissionError && (
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-950 text-xs space-y-3">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1 leading-relaxed font-medium">{submissionError}</div>
+          </div>
+          {canRetryProfile && onRetryProfile && (
+            <div className="pl-6.5">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onRetryProfile}
+                isLoading={isSubmitting}
+                className="bg-red-700 hover:bg-red-800 text-white"
+              >
+                Retry Saving Profile
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         {/* Card 1: Account Details */}

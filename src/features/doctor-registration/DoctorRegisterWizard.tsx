@@ -25,12 +25,16 @@ import { StepReview } from './steps/StepReview';
 import { StepCompletion } from './steps/StepCompletion';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { useAuth } from '../doctor-auth/AuthContext';
 
 export const DoctorRegisterWizard: React.FC = () => {
+  const { registerDoctorAccount, retryCreateProfile } = useAuth();
   const [formData, setFormData] = useState<RegistrationFormState>(INITIAL_REGISTRATION_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [maxAccessibleStep, setMaxAccessibleStep] = useState<RegistrationStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [canRetryProfile, setCanRetryProfile] = useState(false);
 
   const { currentStep, isCompleted } = formData;
 
@@ -150,18 +154,87 @@ export const DoctorRegisterWizard: React.FC = () => {
     }
   };
 
-  const handleCompleteSetup = () => {
+  const handleCompleteSetup = async () => {
+    // 1. Comprehensive pre-submission validation
+    const accountErrors = validateAccountStep(formData.account);
+    const profErrors = validateProfessionalStep(formData.professional);
+    const clinicErrors = validateClinicLocationStep(formData.clinic);
+    const schedErrors = validateScheduleStep(formData.schedule);
+
+    if (Object.keys(accountErrors).length > 0) {
+      setErrors(accountErrors);
+      setFormData((prev) => ({ ...prev, currentStep: 1 }));
+      setSubmissionError('Please review and correct your Doctor Account details before submitting.');
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+      return;
+    }
+    if (Object.keys(profErrors).length > 0) {
+      setErrors(profErrors);
+      setFormData((prev) => ({ ...prev, currentStep: 2 }));
+      setSubmissionError('Please review and correct your Medical Professional details.');
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+      return;
+    }
+    if (Object.keys(clinicErrors).length > 0) {
+      setErrors(clinicErrors);
+      setFormData((prev) => ({ ...prev, currentStep: 3 }));
+      setSubmissionError('Please review and correct your Practice Location details.');
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+      return;
+    }
+    if (Object.keys(schedErrors).length > 0) {
+      setErrors(schedErrors);
+      setFormData((prev) => ({ ...prev, currentStep: 4 }));
+      setSubmissionError('Please review and correct your Consultation Schedule.');
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+      return;
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setSubmissionError(null);
+    setCanRetryProfile(false);
+
+    const result = await registerDoctorAccount(
+      formData.account,
+      formData.professional,
+      formData.clinic,
+      formData.schedule
+    );
+
+    setIsSubmitting(false);
+
+    if (result.success) {
       setFormData((prev) => ({ ...prev, isCompleted: true }));
       window.scrollTo({ top: 100, behavior: 'smooth' });
-    }, 400);
+    } else {
+      setSubmissionError(result.error || 'Failed to complete doctor account registration.');
+      if (result.canRetryProfile) {
+        setCanRetryProfile(true);
+      }
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+    }
+  };
+
+  const handleRetryProfile = async () => {
+    setIsSubmitting(true);
+    setSubmissionError(null);
+    const result = await retryCreateProfile();
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setCanRetryProfile(false);
+      setFormData((prev) => ({ ...prev, isCompleted: true }));
+      window.scrollTo({ top: 100, behavior: 'smooth' });
+    } else {
+      setSubmissionError(result.error || 'Failed to save doctor profile. Please try again.');
+    }
   };
 
   const handleReset = () => {
     setFormData(INITIAL_REGISTRATION_STATE);
     setErrors({});
+    setSubmissionError(null);
+    setCanRetryProfile(false);
     setMaxAccessibleStep(1);
   };
 
@@ -242,6 +315,9 @@ export const DoctorRegisterWizard: React.FC = () => {
                     onEditStep={handleJumpToStep}
                     onComplete={handleCompleteSetup}
                     isSubmitting={isSubmitting}
+                    submissionError={submissionError}
+                    canRetryProfile={canRetryProfile}
+                    onRetryProfile={handleRetryProfile}
                   />
                 )}
 

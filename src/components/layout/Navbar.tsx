@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Stethoscope, ArrowRight } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useAuth } from '../../features/doctor-auth/AuthContext';
 
 export const Navbar: React.FC = () => {
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -95,25 +97,61 @@ export const Navbar: React.FC = () => {
 
         {/* Zone 3: Primary Action CTA */}
         <div className="hidden sm:flex items-center gap-3 shrink-0">
-          <Link to="/doctor/login">
-            <Button variant="outline" size="sm" className="hidden lg:inline-flex">
-              Doctor Sign In
-            </Button>
-          </Link>
-          <Link to="/doctor/register">
-            <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-              Start Free Trial
-            </Button>
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-2.5">
+              <Link to="/doctor/dashboard">
+                <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                  Doctor Dashboard
+                </Button>
+              </Link>
+              <Link
+                to="/doctor/settings"
+                className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Settings
+              </Link>
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  navigate('/doctor/login');
+                }}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-900 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link to="/doctor/login">
+                <Button variant="outline" size="sm" className="hidden lg:inline-flex">
+                  Doctor Sign In
+                </Button>
+              </Link>
+              <Link to="/doctor/register">
+                <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                  Start Free Trial
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
         <div className="flex md:hidden items-center gap-2">
-          <Link to="/doctor/register">
-            <Button variant="primary" size="sm">
-              Free Trial
-            </Button>
-          </Link>
+          {user ? (
+            <Link to="/doctor/dashboard">
+              <Button variant="primary" size="sm">
+                Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/doctor/register">
+              <Button variant="primary" size="sm">
+                Free Trial
+              </Button>
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -168,20 +206,49 @@ export const Navbar: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-            <Link to="/doctor/login" onClick={() => setMobileMenuOpen(false)} className="w-full">
-              <Button variant="outline" size="md" className="w-full justify-center">
-                Doctor Sign In
-              </Button>
-            </Link>
-            <Link
-              to="/doctor/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full"
-            >
-              <Button variant="primary" size="md" className="w-full justify-center">
-                Register Practice (1-Month Free Trial)
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link to="/doctor/dashboard" onClick={() => setMobileMenuOpen(false)} className="w-full">
+                  <Button variant="primary" size="md" className="w-full justify-center">
+                    Doctor OPD Console
+                  </Button>
+                </Link>
+                <Link to="/doctor/settings" onClick={() => setMobileMenuOpen(false)} className="w-full">
+                  <Button variant="outline" size="md" className="w-full justify-center text-slate-700">
+                    Practice Settings
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={async () => {
+                    setMobileMenuOpen(false);
+                    await logout();
+                    navigate('/doctor/login');
+                  }}
+                  className="w-full justify-center text-slate-600"
+                >
+                  Sign Out ({user.email})
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/doctor/login" onClick={() => setMobileMenuOpen(false)} className="w-full">
+                  <Button variant="outline" size="md" className="w-full justify-center">
+                    Doctor Sign In
+                  </Button>
+                </Link>
+                <Link
+                  to="/doctor/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full"
+                >
+                  <Button variant="primary" size="md" className="w-full justify-center">
+                    Register Practice (1-Month Free Trial)
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

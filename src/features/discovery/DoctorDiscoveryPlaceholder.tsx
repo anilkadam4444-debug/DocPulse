@@ -91,7 +91,7 @@ export const DoctorDiscoveryPlaceholder: React.FC = () => {
       const matchesQuery =
         !q ||
         doc.fullName.toLowerCase().includes(q) ||
-        doc.practiceLocations.some((loc) => loc.clinicName.toLowerCase().includes(q)) ||
+        doc.practiceLocations.some((loc) => (loc.clinicName || loc.name || '').toLowerCase().includes(q)) ||
         doc.specialization.toLowerCase().includes(q);
 
       return matchesCity && matchesSpec && matchesQuery;

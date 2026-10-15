@@ -1,21 +1,11 @@
 import { IndianCity, MedicalSpecialization } from './index';
+import { PracticeLocation } from './auth';
 
 /**
  * Doctor tenant model.
  * Each doctor is an independent account holder & tenant in the multi-tenant architecture.
  * Clinic or hospital names are practice locations associated with the doctor's account.
  */
-export interface PracticeLocation {
-  id: string;
-  clinicName: string;
-  addressLine: string;
-  locality: string;
-  city: IndianCity;
-  pincode: string;
-  state: string;
-  qrCodeId: string;
-  isPrimary: boolean;
-}
 
 export interface DoctorProfile {
   id: string;

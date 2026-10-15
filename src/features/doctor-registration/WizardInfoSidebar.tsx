@@ -109,13 +109,12 @@ export const WizardInfoSidebar: React.FC<WizardInfoSidebarProps> = ({ currentSte
       {currentStep === 5 && (
         <Card variant="subtle" className="p-4 space-y-2 text-xs text-slate-600">
           <div className="flex items-center gap-1.5 font-bold text-slate-900">
-            <AlertCircle className="w-3.5 h-3.5 text-teal-700" />
-            <span>Prototype Phase Disclosure</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
+            <span>Secure Firebase Cloud Setup</span>
           </div>
           <p className="leading-relaxed">
-            This registration wizard validates and structures your complete practice profile in
-            memory. Firebase Authentication and persistent Firestore records will be integrated in
-            Phase 2.
+            Submitting completes your doctor tenant setup: creating your Firebase Authentication account,
+            dispatching an email verification link, and initializing your doctor profile in Cloud Firestore.
           </p>
         </Card>
       )}

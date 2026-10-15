@@ -1,12 +1,14 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { LandingPage } from './features/landing/LandingPage';
 import { DoctorDiscoveryPlaceholder } from './features/discovery/DoctorDiscoveryPlaceholder';
 import { DoctorRegisterWizard } from './features/doctor-registration/DoctorRegisterWizard';
-import { DoctorLoginPlaceholder } from './features/doctor-auth/DoctorLoginPlaceholder';
-import { DoctorDashboardPlaceholder } from './features/doctor-dashboard/DoctorDashboardPlaceholder';
+import { DoctorLoginPage } from './features/doctor-auth/DoctorLoginPage';
+import { DoctorDashboard } from './features/doctor-dashboard/DoctorDashboard';
+import { DoctorSettingsPage } from './features/doctor-settings/DoctorSettingsPage';
 import { NotFoundPage } from './features/not-found/NotFoundPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -20,8 +22,23 @@ export const AppRoutes: React.FC = () => {
 
         {/* Doctor Portal Routes */}
         <Route path="doctor/register" element={<DoctorRegisterWizard />} />
-        <Route path="doctor/login" element={<DoctorLoginPlaceholder />} />
-        <Route path="doctor/dashboard" element={<DoctorDashboardPlaceholder />} />
+        <Route path="doctor/login" element={<DoctorLoginPage />} />
+        <Route
+          path="doctor/dashboard"
+          element={
+            <ProtectedRoute>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="doctor/settings"
+          element={
+            <ProtectedRoute>
+              <DoctorSettingsPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Catch-all 404 Route */}
         <Route path="*" element={<NotFoundPage />} />

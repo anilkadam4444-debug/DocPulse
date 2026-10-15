@@ -1,0 +1,217 @@
+{
+  "entities": {
+    "DoctorProfile": {
+      "title": "DoctorProfile",
+      "description": "Doctor tenant account profile for independent medical practitioners in India",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Authenticated Firebase User UID"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Unique tenant slug or UID for practice isolation"
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "Doctor full legal name with Dr. prefix"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 120,
+          "description": "Professional practice email address"
+        },
+        "mobile": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[6-9][0-9]{9}$",
+          "description": "10-digit Indian mobile number"
+        },
+        "qualifications": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200,
+          "description": "Medical qualifications/degrees (e.g. MBBS, MD)"
+        },
+        "specialization": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Primary medical specialization"
+        },
+        "customSpecialization": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Custom specialization if Other selected"
+        },
+        "registrationCouncil": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200,
+          "description": "State medical council or NMC authority"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 80,
+          "description": "Medical council registration number"
+        },
+        "experienceYears": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Years of clinical experience"
+        },
+        "languages": {
+          "type": "string",
+          "description": "Comma separated or serialized languages"
+        },
+        "bio": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Doctor profile description and clinical summary"
+        },
+        "clinicName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 150,
+          "description": "Primary practice location or clinic name"
+        },
+        "practiceType": {
+          "type": "string",
+          "enum": ["independent_clinic", "polyclinic", "hospital_opd", "nursing_home"],
+          "description": "Facility type"
+        },
+        "city": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "Primary Indian practice city"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "Indian state or union territory"
+        },
+        "locality": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Locality or neighborhood"
+        },
+        "addressLine": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 300,
+          "description": "Full street address of clinic"
+        },
+        "landmark": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Nearby landmark"
+        },
+        "pincode": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 6,
+          "pattern": "^[1-9][0-9]{5}$",
+          "description": "6-digit Indian postal code"
+        },
+        "consultationFee": {
+          "type": "string",
+          "description": "Standard OPD consultation fee in INR"
+        },
+        "followUpFee": {
+          "type": "string",
+          "description": "Follow-up consultation fee in INR"
+        },
+        "followUpDays": {
+          "type": "number",
+          "description": "Days for valid follow-up window"
+        },
+        "clinicPhone": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Reception desk telephone or landline"
+        },
+        "avgDurationMinutes": {
+          "type": "number",
+          "description": "Average consultation duration in minutes"
+        },
+        "locations": {
+          "type": "array",
+          "description": "List of practice locations and clinics managed by this doctor"
+        },
+        "consultationSettings": {
+          "type": "object",
+          "description": "Consultation fee, duration, modes, and emergency reserve configuration"
+        },
+        "bookingPreferences": {
+          "type": "object",
+          "description": "Queue token capacity, walk-in QR toggle, WhatsApp alert threshold, and booking windows"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["doctor_owner"],
+          "description": "Role in multi-tenant system"
+        },
+        "credentialsVerified": {
+          "type": "boolean",
+          "description": "Council credential verification flag (always false on initial self-registration)"
+        },
+        "emailVerified": {
+          "type": "boolean",
+          "description": "Cached email verification state"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Document creation server timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Document modification server timestamp"
+        }
+      },
+      "required": [
+        "uid",
+        "tenantId",
+        "fullName",
+        "email",
+        "mobile",
+        "qualifications",
+        "specialization",
+        "registrationCouncil",
+        "registrationNumber",
+        "clinicName",
+        "practiceType",
+        "city",
+        "state",
+        "locality",
+        "addressLine",
+        "pincode",
+        "consultationFee",
+        "role",
+        "credentialsVerified",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/doctors/{doctorId}": {
+      "schema": "DoctorProfile",
+      "description": "Multi-tenant doctor practice profile secured by doctor UID"
+    }
+  }
+}
