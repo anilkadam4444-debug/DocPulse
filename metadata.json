@@ -1,0 +1,6 @@
+{
+  "name": "DocPulse India - Doctor & Patient SaaS",
+  "description": "Multi-tenant practice management platform for independent doctors across India with city-first discovery, queue tokens, WhatsApp confirmations, and clinic CRM.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
