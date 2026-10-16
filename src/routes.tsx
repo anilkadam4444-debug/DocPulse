@@ -2,7 +2,8 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { LandingPage } from './features/landing/LandingPage';
-import { DoctorDiscoveryPlaceholder } from './features/discovery/DoctorDiscoveryPlaceholder';
+import { DoctorDiscoveryPage } from './features/discovery/DoctorDiscoveryPage';
+import { PublicDoctorProfilePage } from './features/discovery/PublicDoctorProfilePage';
 import { DoctorRegisterWizard } from './features/doctor-registration/DoctorRegisterWizard';
 import { DoctorLoginPage } from './features/doctor-auth/DoctorLoginPage';
 import { DoctorDashboard } from './features/doctor-dashboard/DoctorDashboard';
@@ -17,8 +18,9 @@ export const AppRoutes: React.FC = () => {
         {/* Public Landing Page */}
         <Route index element={<LandingPage />} />
 
-        {/* Patient Doctor Discovery */}
-        <Route path="doctors" element={<DoctorDiscoveryPlaceholder />} />
+        {/* Patient Doctor Discovery & Public Profile */}
+        <Route path="doctors" element={<DoctorDiscoveryPage />} />
+        <Route path="doctors/:doctorId" element={<PublicDoctorProfilePage />} />
 
         {/* Doctor Portal Routes */}
         <Route path="doctor/register" element={<DoctorRegisterWizard />} />

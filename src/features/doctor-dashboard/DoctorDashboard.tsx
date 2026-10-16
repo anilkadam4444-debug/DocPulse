@@ -17,6 +17,8 @@ import {
   LogOut,
   Mail,
   FileCheck,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../doctor-auth/AuthContext';
 import { formatQueueToken } from '../../lib/queue-calculator';
@@ -163,7 +165,24 @@ export const DoctorDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {doctorProfile?.uid && (
+              <Link
+                to={`/doctors/${doctorProfile.uid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Globe className="w-3.5 h-3.5 text-teal-400" />}
+                  rightIcon={<ExternalLink className="w-3 h-3 text-slate-400" />}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 hover:border-slate-600 text-xs"
+                >
+                  Public Patient Profile
+                </Button>
+              </Link>
+            )}
             <Link to="/doctor/settings">
               <Button
                 variant="outline"

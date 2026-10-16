@@ -412,6 +412,7 @@ export const DoctorSettingsPage: React.FC = () => {
               {activeTab === 'review' && (
                 <ReviewSaveSection
                   formData={formData}
+                  doctorUid={doctorProfile?.uid}
                   isDirty={isDirty}
                   isSaving={isSaving}
                   saveSuccess={saveSuccess}

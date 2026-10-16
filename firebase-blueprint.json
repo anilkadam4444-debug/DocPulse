@@ -206,12 +206,132 @@
         "credentialsVerified",
         "createdAt"
       ]
+    },
+    "PublicDoctorProfile": {
+      "title": "PublicDoctorProfile",
+      "description": "Sanitized public profile for public patient discovery across Indian cities",
+      "type": "object",
+      "properties": {
+        "doctorUid": {
+          "type": "string",
+          "description": "Doctor's Firebase UID"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Doctor's professional legal name"
+        },
+        "specialization": {
+          "type": "string",
+          "description": "Medical specialization"
+        },
+        "customSpecialization": {
+          "type": "string",
+          "description": "Custom specialization if Other"
+        },
+        "qualifications": {
+          "type": "string",
+          "description": "Degrees and credentials"
+        },
+        "experienceYears": {
+          "type": "string",
+          "description": "Years of experience"
+        },
+        "languages": {
+          "type": "array",
+          "description": "Languages spoken"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Public professional biography"
+        },
+        "registrationCouncil": {
+          "type": "string",
+          "description": "Medical council authority"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "description": "Council licence number"
+        },
+        "credentialsVerified": {
+          "type": "boolean",
+          "description": "State medical council verification flag"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "pending_review", "published", "suspended"],
+          "description": "Publication lifecycle status"
+        },
+        "city": {
+          "type": "string",
+          "description": "Primary practice city"
+        },
+        "cities": {
+          "type": "array",
+          "description": "All cities where doctor operates active clinics"
+        },
+        "primaryClinicName": {
+          "type": "string",
+          "description": "Name of primary clinic"
+        },
+        "primaryAddress": {
+          "type": "string",
+          "description": "Address of primary clinic"
+        },
+        "primaryLocality": {
+          "type": "string",
+          "description": "Locality of primary clinic"
+        },
+        "primaryPincode": {
+          "type": "string",
+          "description": "PIN code of primary clinic"
+        },
+        "consultationFee": {
+          "type": "string",
+          "description": "Standard OPD consultation fee in INR"
+        },
+        "locations": {
+          "type": "array",
+          "description": "Active public practice locations"
+        },
+        "schedule": {
+          "type": "object",
+          "description": "OPD working schedule and sessions"
+        },
+        "bookingPreferences": {
+          "type": "object",
+          "description": "Public booking and walk-in rules"
+        },
+        "searchKeywords": {
+          "type": "array",
+          "description": "Tokens for client/Firestore search"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "doctorUid",
+        "fullName",
+        "specialization",
+        "qualifications",
+        "city",
+        "cities",
+        "primaryClinicName",
+        "consultationFee",
+        "status",
+        "credentialsVerified"
+      ]
     }
   },
   "firestore": {
     "/doctors/{doctorId}": {
       "schema": "DoctorProfile",
       "description": "Multi-tenant doctor practice profile secured by doctor UID"
+    },
+    "/publicDoctors/{doctorId}": {
+      "schema": "PublicDoctorProfile",
+      "description": "Public doctor directory listing for patient discovery"
     }
   }
 }

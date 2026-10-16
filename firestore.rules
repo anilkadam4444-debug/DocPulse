@@ -168,5 +168,47 @@ service cloud.firestore {
       // Deletion is blocked from client SDK
       allow delete: if false;
     }
+
+    // Public Doctors Collection: Sanitized listings for patient discovery
+    match /publicDoctors/{doctorId} {
+      // Any patient can view a published doctor's public profile document
+      // The doctor owner can read their own document even if draft/pending
+      allow get: if resource == null ||
+                    (resource.data.status == 'published') ||
+                    (isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId);
+
+      // Public directory listing: Only published profiles can be listed or queried
+      // Queries must include where('status', '==', 'published') to satisfy this rule
+      allow list: if resource.data.status == 'published';
+
+      // Doctor creates their public profile
+      allow create: if isSignedIn() &&
+        isValidId(doctorId) &&
+        request.auth.uid == doctorId &&
+        incoming().doctorUid == request.auth.uid &&
+        incoming().credentialsVerified == false &&
+        (incoming().status in ['draft', 'pending_review', 'published']) &&
+        incoming().fullName is string && incoming().fullName.size() >= 3 &&
+        incoming().specialization is string &&
+        incoming().city is string &&
+        incoming().primaryClinicName is string &&
+        incoming().consultationFee is string;
+
+      // Doctor updates their public profile: Credential verification remains immutable
+      allow update: if isSignedIn() &&
+        isValidId(doctorId) &&
+        request.auth.uid == doctorId &&
+        incoming().doctorUid == existing().doctorUid &&
+        incoming().credentialsVerified == existing().credentialsVerified &&
+        (incoming().status in ['draft', 'pending_review', 'published', 'suspended']) &&
+        incoming().fullName is string && incoming().fullName.size() >= 3 &&
+        incoming().specialization is string &&
+        incoming().city is string &&
+        incoming().primaryClinicName is string &&
+        incoming().consultationFee is string;
+
+      // Deletion is denied; doctor sets status to 'draft' or 'suspended' to unpublish
+      allow delete: if false;
+    }
   }
 }

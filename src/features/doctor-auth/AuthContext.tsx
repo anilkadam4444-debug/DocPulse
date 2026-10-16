@@ -13,6 +13,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { AuthContextType, DoctorTenantProfile } from '../../types/auth';
 import { getFriendlyAuthErrorMessage } from './auth-errors';
+import { publishDoctorProfile } from '../doctor-search/searchService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -225,7 +226,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         await setDoc(doc(db, 'doctors', uid), profileDoc);
         setPendingProfile(null);
-        await fetchDoctorProfile(uid);
+        const savedProfile = await fetchDoctorProfile(uid);
+
+        // Auto-publish to public discovery directory
+        if (savedProfile) {
+          try {
+            await publishDoctorProfile(uid, savedProfile, 'published');
+          } catch (pubErr) {
+            console.warn('Silent public profile listing sync warning on registration:', pubErr);
+          }
+        }
+
         return { success: true };
       } catch (firestoreError) {
         handleFirestoreError(firestoreError, OperationType.WRITE, `doctors/${uid}`);
@@ -249,7 +260,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await setDoc(doc(db, 'doctors', pendingProfile.uid), pendingProfile.payload);
       setPendingProfile(null);
-      await fetchDoctorProfile(pendingProfile.uid);
+      const savedProfile = await fetchDoctorProfile(pendingProfile.uid);
+      if (savedProfile) {
+        try {
+          await publishDoctorProfile(pendingProfile.uid, savedProfile, 'published');
+        } catch (pubErr) {
+          console.warn('Silent public profile listing sync warning on retry:', pubErr);
+        }
+      }
       return { success: true };
     } catch (err: unknown) {
       const rawMsg = err instanceof Error ? err.message : String(err);
@@ -284,7 +302,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       safeUpdates.emailVerified = auth.currentUser.emailVerified;
 
       await setDoc(docRef, safeUpdates, { merge: true });
-      await fetchDoctorProfile(uid);
+      const updatedProfile = await fetchDoctorProfile(uid);
+
+      // Auto-sync updated public directory listing
+      if (updatedProfile) {
+        try {
+          await publishDoctorProfile(uid, updatedProfile, 'published');
+        } catch (pubErr) {
+          console.warn('Silent public profile listing sync warning on update:', pubErr);
+        }
+      }
+
       return { success: true };
     } catch (err: unknown) {
       const rawMsg = err instanceof Error ? err.message : String(err);
