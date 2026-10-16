@@ -165,6 +165,56 @@ service cloud.firestore {
           'updatedAt'
         ]);
 
+      // Booked Slots Subcollection: Atomic conflict prevention and availability check
+      // No PII is stored here (only slotId, doctorUid, locationId, date, startTime, endTime, status)
+      match /bookedSlots/{slotId} {
+        // Public can read booked slots to compute genuine available slots
+        allow get, list: if true;
+
+        // Atomic reservation: only if slot does not already exist
+        allow create: if !exists(/databases/$(database)/documents/doctors/$(doctorId)/bookedSlots/$(slotId)) &&
+          incoming().slotId == slotId &&
+          incoming().doctorUid == doctorId &&
+          incoming().status == 'booked' &&
+          incoming().appointmentDate is string &&
+          incoming().startTime is string &&
+          incoming().endTime is string;
+
+        // Doctor owner can manage or cancel booked slots
+        allow update, delete: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId;
+      }
+
+      // Appointments Subcollection: Private patient appointments
+      match /appointments/{appointmentId} {
+        // Doctor can list all their appointments; individual patient can get by exact ID
+        allow get: if (isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId) ||
+                      (resource != null && resource.data.appointmentId == appointmentId);
+        allow list: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId;
+
+        // Patient creates appointment atomically with booking data
+        allow create: if isValidId(appointmentId) &&
+          incoming().appointmentId == appointmentId &&
+          incoming().doctorUid == doctorId &&
+          incoming().patientName is string && incoming().patientName.size() >= 2 && incoming().patientName.size() <= 100 &&
+          incoming().patientMobile is string && incoming().patientMobile.size() == 10 && incoming().patientMobile.matches('^[6-9][0-9]{9}$') &&
+          incoming().appointmentDate is string && incoming().appointmentDate.size() == 10 &&
+          incoming().startTime is string && incoming().startTime.size() >= 4 &&
+          incoming().endTime is string && incoming().endTime.size() >= 4 &&
+          incoming().consultationFee is string &&
+          (incoming().status in ['pending', 'confirmed']) &&
+          incoming().bookingSource == 'online';
+
+        // Only the doctor owner can update appointment status (e.g. mark completed, cancelled, no-show)
+        allow update: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId &&
+          incoming().appointmentId == existing().appointmentId &&
+          incoming().doctorUid == existing().doctorUid &&
+          incoming().slotId == existing().slotId &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'notes']);
+
+        // Prevent client deletion; appointments should be cancelled, not deleted
+        allow delete: if false;
+      }
+
       // Deletion is blocked from client SDK
       allow delete: if false;
     }

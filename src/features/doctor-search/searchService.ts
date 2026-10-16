@@ -288,7 +288,7 @@ export async function publishDoctorProfile(
       bookingPreferences: {
         walkInQREnabled: privateProfile.bookingPreferences?.walkInQREnabled ?? true,
         advanceBookingDays: privateProfile.bookingPreferences?.advanceBookingDays || 7,
-        onlineBookingEnabled: false, // Explicitly false: booking workflow disabled until Prompt 8
+        onlineBookingEnabled: privateProfile.bookingPreferences?.onlineBookingEnabled ?? true,
       },
       searchKeywords: searchTokens,
       publishedAt: new Date().toISOString(),

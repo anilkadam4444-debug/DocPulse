@@ -389,7 +389,7 @@ export const DoctorDiscoveryPage: React.FC = () => {
                         Quick View
                       </Button>
 
-                      <Link to={`/doctors/${doc.doctorUid}`}>
+                      <Link to={`/doctors/${doc.doctorUid}/book`}>
                         <Button
                           variant="primary"
                           size="sm"
@@ -605,7 +605,7 @@ export const DoctorDiscoveryPage: React.FC = () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="p-4 sm:p-5 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
+              <div className="p-4 sm:p-5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/60">
                 <Button
                   type="button"
                   variant="outline"
@@ -615,18 +615,29 @@ export const DoctorDiscoveryPage: React.FC = () => {
                   Close
                 </Button>
 
-                <Link
-                  to={`/doctors/${selectedQuickDoctor.doctorUid}`}
-                  onClick={() => setSelectedQuickDoctor(null)}
-                >
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/doctors/${selectedQuickDoctor.doctorUid}`}
+                    onClick={() => setSelectedQuickDoctor(null)}
                   >
-                    View Full Dedicated Profile
-                  </Button>
-                </Link>
+                    <Button variant="outline" size="sm">
+                      View Profile
+                    </Button>
+                  </Link>
+
+                  <Link
+                    to={`/doctors/${selectedQuickDoctor.doctorUid}/book${activeModalLocationId ? `?locationId=${activeModalLocationId}` : ''}`}
+                    onClick={() => setSelectedQuickDoctor(null)}
+                  >
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                    >
+                      Book Appointment
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

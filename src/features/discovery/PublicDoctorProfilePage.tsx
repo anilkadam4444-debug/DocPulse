@@ -29,7 +29,6 @@ export const PublicDoctorProfilePage: React.FC = () => {
   const [doctor, setDoctor] = useState<PublicDoctorProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedLocation, setSelectedLocation] = useState<PublicPracticeLocation | null>(null);
-  const [bookingNoticeOpen, setBookingNoticeOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!doctorId) {
@@ -164,39 +163,18 @@ export const PublicDoctorProfilePage: React.FC = () => {
                   Follow-up: ₹{doctor.followUpFee} (Within {doctor.followUpDays || 7} days)
                 </div>
               )}
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => setBookingNoticeOpen(true)}
-                className="w-full justify-center mt-1"
-                leftIcon={<CalendarCheck className="w-4 h-4" />}
-              >
-                Book Appointment
-              </Button>
+              <Link to={`/doctors/${doctor.doctorUid}/book${selectedLocation ? `?locationId=${selectedLocation.id}` : ''}`}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="w-full justify-center mt-1"
+                  leftIcon={<CalendarCheck className="w-4 h-4" />}
+                >
+                  Book Appointment
+                </Button>
+              </Link>
             </div>
           </div>
-
-          {/* Transparent Notice if Book Appointment clicked */}
-          {bookingNoticeOpen && (
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3 animate-in fade-in duration-150">
-              <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <strong className="block font-bold">Online Appointment Slot Booking Status</strong>
-                <p className="leading-relaxed">
-                  Direct online slot reservation workflow will be connected in the upcoming release.
-                  In the meantime, Dr. {doctor.fullName}&apos;s clinic accepts walk-in consultations during
-                  the published session hours below. You may also contact clinic reception directly.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setBookingNoticeOpen(false)}
-                  className="text-xs font-semibold text-amber-800 underline cursor-pointer mt-1"
-                >
-                  Dismiss notice
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Medical Registration Transparency Note */}
           <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200 text-xs flex items-start gap-2.5 text-slate-600">

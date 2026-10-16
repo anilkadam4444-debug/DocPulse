@@ -39,6 +39,7 @@ export interface BookingPreferences {
   advanceBookingDays: number;
   cancellationNoticeHours: number;
   autoConfirmOnline: boolean;
+  onlineBookingEnabled?: boolean;
 }
 
 export interface DoctorTenantProfile {

@@ -322,6 +322,83 @@
         "status",
         "credentialsVerified"
       ]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Patient appointment booking record",
+      "type": "object",
+      "properties": {
+        "appointmentId": { "type": "string", "description": "Unique appointment ID" },
+        "bookingReference": { "type": "string", "description": "Human-friendly booking reference code" },
+        "doctorUid": { "type": "string", "description": "Doctor UID" },
+        "locationId": { "type": "string", "description": "Practice location ID" },
+        "locationName": { "type": "string", "description": "Clinic / hospital location name" },
+        "locationAddress": { "type": "string", "description": "Clinic address" },
+        "city": { "type": "string", "description": "Practice city" },
+        "patientName": { "type": "string", "minLength": 2, "maxLength": 100, "description": "Patient full name" },
+        "patientMobile": { "type": "string", "pattern": "^[6-9][0-9]{9}$", "description": "10-digit Indian mobile number" },
+        "patientEmail": { "type": "string", "format": "email", "description": "Optional patient email" },
+        "visitReason": { "type": "string", "maxLength": 300, "description": "Short visit reason or chief complaint" },
+        "appointmentDate": { "type": "string", "description": "Date of appointment in YYYY-MM-DD" },
+        "startTime": { "type": "string", "description": "Slot start time in HH:mm (24hr)" },
+        "endTime": { "type": "string", "description": "Slot end time in HH:mm (24hr)" },
+        "timeZone": { "type": "string", "description": "Timezone, e.g. Asia/Kolkata" },
+        "consultationDurationMinutes": { "type": "number", "description": "Duration in minutes" },
+        "consultationFee": { "type": "string", "description": "Fee in INR" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "cancelled", "completed", "no_show"],
+          "description": "Status of the appointment"
+        },
+        "bookingSource": {
+          "type": "string",
+          "enum": ["online", "walk_in_qr", "receptionist"],
+          "description": "Origin of the appointment"
+        },
+        "slotId": { "type": "string", "description": "Deterministic slot identifier" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "appointmentId",
+        "bookingReference",
+        "doctorUid",
+        "locationId",
+        "patientName",
+        "patientMobile",
+        "appointmentDate",
+        "startTime",
+        "endTime",
+        "consultationFee",
+        "status",
+        "bookingSource",
+        "slotId"
+      ]
+    },
+    "BookedSlot": {
+      "title": "BookedSlot",
+      "description": "Authoritative slot reservation to prevent double-booking without exposing PII",
+      "type": "object",
+      "properties": {
+        "slotId": { "type": "string", "description": "Deterministic ID: {locationId}_{date}_{startTime}" },
+        "doctorUid": { "type": "string", "description": "Doctor UID" },
+        "locationId": { "type": "string", "description": "Location ID" },
+        "appointmentDate": { "type": "string", "description": "Date YYYY-MM-DD" },
+        "startTime": { "type": "string", "description": "Start time HH:mm" },
+        "endTime": { "type": "string", "description": "End time HH:mm" },
+        "appointmentId": { "type": "string", "description": "Associated appointment ID" },
+        "status": { "type": "string", "enum": ["booked", "cancelled"], "description": "Slot status" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "slotId",
+        "doctorUid",
+        "locationId",
+        "appointmentDate",
+        "startTime",
+        "endTime",
+        "status"
+      ]
     }
   },
   "firestore": {
@@ -332,6 +409,14 @@
     "/publicDoctors/{doctorId}": {
       "schema": "PublicDoctorProfile",
       "description": "Public doctor directory listing for patient discovery"
+    },
+    "/doctors/{doctorId}/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Private appointment records for the doctor practice"
+    },
+    "/doctors/{doctorId}/bookedSlots/{slotId}": {
+      "schema": "BookedSlot",
+      "description": "Authoritative slot reservation documents for atomic double-booking prevention"
     }
   }
 }
