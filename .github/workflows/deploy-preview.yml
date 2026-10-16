@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write # For posting preview URL comment on the PR
+  pull-requests: write
   id-token: write
 
 concurrency:
@@ -46,11 +46,13 @@ jobs:
 
       - name: Build preview assets
         run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
 
       - name: Deploy to Firebase Hosting Preview Channel
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DOCPULSE_FF978 || secrets.FIREBASE_SERVICE_ACCOUNT }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DOCPULSE_FF978 }}
           projectId: docpulse-ff978
           expires: 7d

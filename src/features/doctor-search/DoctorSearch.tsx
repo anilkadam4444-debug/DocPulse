@@ -82,10 +82,10 @@ export const DoctorSearch: React.FC<DoctorSearchProps> = ({
 
       {/* Main Search Controls Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
-        {/* Field 1: City Selection (Mandatory) */}
+        {/* Field 1: City Selection */}
         <div className="md:col-span-4 space-y-1">
           <label htmlFor="city-selector" className="block text-xs font-semibold text-slate-700">
-            1. City Selection (Mandatory)
+            1. City (Filter by Location)
           </label>
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-teal-600 pointer-events-none">
@@ -96,10 +96,11 @@ export const DoctorSearch: React.FC<DoctorSearchProps> = ({
               list="indian-cities-list"
               value={selectedCity}
               onChange={(e) => onCityChange(e.target.value)}
-              placeholder="Type or select city (e.g. Mumbai)..."
+              placeholder="All Cities (e.g. Pune, Mumbai)..."
               className="w-full bg-slate-50 hover:bg-white text-slate-900 text-sm font-medium rounded-lg border border-slate-300 focus:border-teal-600 focus:bg-white focus:ring-2 focus:ring-teal-100 py-2.5 pl-9 pr-8 transition-colors"
             />
             <datalist id="indian-cities-list">
+              <option value="All Cities" />
               {INDIAN_CITIES.map((c) => (
                 <option key={c} value={c} />
               ))}

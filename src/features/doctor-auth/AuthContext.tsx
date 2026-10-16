@@ -53,7 +53,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        await fetchDoctorProfile(currentUser.uid);
+        const prof = await fetchDoctorProfile(currentUser.uid);
+        if (prof) {
+          publishDoctorProfile(currentUser.uid, prof, 'published').catch((err) =>
+            console.warn('Silent public profile listing sync warning on auth state change:', err)
+          );
+        }
       } else {
         setDoctorProfile(null);
       }
@@ -66,7 +71,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.trim(), pass);
-      await fetchDoctorProfile(userCredential.user.uid);
+      const prof = await fetchDoctorProfile(userCredential.user.uid);
+      if (prof) {
+        publishDoctorProfile(userCredential.user.uid, prof, 'published').catch((err) =>
+          console.warn('Silent public profile listing sync warning on login:', err)
+        );
+      }
       return { success: true };
     } catch (err: unknown) {
       const rawMsg = err instanceof Error ? err.message : String(err);
@@ -228,13 +238,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setPendingProfile(null);
         const savedProfile = await fetchDoctorProfile(uid);
 
-        // Auto-publish to public discovery directory
-        if (savedProfile) {
-          try {
-            await publishDoctorProfile(uid, savedProfile, 'published');
-          } catch (pubErr) {
-            console.warn('Silent public profile listing sync warning on registration:', pubErr);
-          }
+        // Auto-publish to public discovery directory immediately
+        const profileToPublish = (savedProfile || profileDoc) as unknown as DoctorTenantProfile;
+        try {
+          await publishDoctorProfile(uid, profileToPublish, 'published');
+        } catch (pubErr) {
+          console.warn('Silent public profile listing sync warning on registration:', pubErr);
         }
 
         return { success: true };

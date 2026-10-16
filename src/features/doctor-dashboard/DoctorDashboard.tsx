@@ -32,6 +32,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Appointment } from '../booking/types';
 import { getDoctorAppointments, updateAppointmentStatus } from '../booking/bookingService';
+import { publishDoctorProfile } from '../doctor-search/searchService';
 
 interface MockQueueItem {
   tokenNumber: number;
@@ -70,6 +71,11 @@ export const DoctorDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchAppointments();
+    if (doctorProfile?.uid) {
+      publishDoctorProfile(doctorProfile.uid, doctorProfile, 'published').catch((err) =>
+        console.warn('Dashboard background directory sync:', err)
+      );
+    }
   }, [doctorProfile?.uid]);
 
   const handleStatusChange = async (

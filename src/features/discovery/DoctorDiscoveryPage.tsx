@@ -23,14 +23,17 @@ import {
   Eye,
 } from 'lucide-react';
 import { DoctorSearch } from '../doctor-search/DoctorSearch';
-import { searchPublicDoctors } from '../doctor-search/searchService';
+import { searchPublicDoctors, publishDoctorProfile } from '../doctor-search/searchService';
 import { PublicDoctorProfile, PublicPracticeLocation } from '../../types/public-doctor';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { useAuth } from '../doctor-auth/AuthContext';
 
 export const DoctorDiscoveryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const { user, doctorProfile } = useAuth();
 
   const cityParam = searchParams.get('city') || '';
   const specParam = searchParams.get('specialization') || 'All Specializations';
@@ -41,12 +44,32 @@ export const DoctorDiscoveryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>(queryParam);
 
   const [doctors, setDoctors] = useState<PublicDoctorProfile[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Quick View Modal State
   const [selectedQuickDoctor, setSelectedQuickDoctor] = useState<PublicDoctorProfile | null>(null);
   const [activeModalLocationId, setActiveModalLocationId] = useState<string>('');
+
+  // Auto-sync: If a doctor is registered and logged in, guarantee their public listing is synced
+  useEffect(() => {
+    if (user && doctorProfile?.uid) {
+      publishDoctorProfile(doctorProfile.uid, doctorProfile, 'published')
+        .then(() => {
+          // Refresh list to immediately include this doctor
+          searchPublicDoctors({
+            city: selectedCity,
+            specialization: selectedSpec,
+            query: searchQuery,
+          }).then((res) => {
+            if (res.doctors.length > 0) {
+              setDoctors(res.doctors);
+            }
+          });
+        })
+        .catch((err) => console.warn('Background auto-sync doctor profile:', err));
+    }
+  }, [user, doctorProfile]);
 
   // Sync state if URL changes
   useEffect(() => {
@@ -57,12 +80,6 @@ export const DoctorDiscoveryPage: React.FC = () => {
 
   // Execute Firestore search whenever city, spec, or query change
   useEffect(() => {
-    if (!selectedCity) {
-      setDoctors([]);
-      setIsLoading(false);
-      return;
-    }
-
     let isMounted = true;
     setIsLoading(true);
     setFetchError(null);
@@ -156,42 +173,48 @@ export const DoctorDiscoveryPage: React.FC = () => {
           isLoading={isLoading}
         />
 
-        {/* Step 1 Mandatory City Prompt (When No City is Selected) */}
-        {!selectedCity && (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-4">
-            <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center mx-auto">
-              <MapPin className="w-6 h-6" />
-            </div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-              Please Select a City to Browse Independent Doctors
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg mx-auto">
-              DocPulse practices mandatory city-first discovery. Select your location above (such as
-              Mumbai, Delhi-NCR, Bengaluru, Pune, or Hyderabad) to view clinics and practice timings
-              in your area.
-            </p>
-            <div className="pt-2">
-              <span className="text-xs font-semibold text-slate-400 block mb-2">
-                Popular Practice Hubs:
-              </span>
-              <div className="flex flex-wrap justify-center gap-2">
-                {['Mumbai', 'Delhi-NCR', 'Bengaluru', 'Pune', 'Hyderabad', 'Chennai'].map((city) => (
-                  <Button
-                    key={city}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCityChange(city)}
-                  >
-                    {city}
-                  </Button>
-                ))}
-              </div>
-            </div>
+        {/* City Filter Pills Bar */}
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 text-xs flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2 text-slate-700 font-medium">
+            <MapPin className="w-4 h-4 text-teal-600 shrink-0" />
+            <span>
+              {selectedCity
+                ? `Filtered by city: ${selectedCity}`
+                : 'Showing all verified practices across India. Click a city to filter:'}
+            </span>
           </div>
-        )}
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleCityChange('')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                !selectedCity
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              All Cities
+            </button>
+            {['Mumbai', 'Delhi-NCR', 'Bengaluru', 'Pune', 'Hyderabad', 'Chennai'].map((city) => (
+              <button
+                key={city}
+                type="button"
+                onClick={() => handleCityChange(city)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  selectedCity.toLowerCase() === city.toLowerCase()
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Loading Skeleton */}
-        {selectedCity && isLoading && (
+        {isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <div
@@ -213,7 +236,7 @@ export const DoctorDiscoveryPage: React.FC = () => {
         )}
 
         {/* Error State */}
-        {selectedCity && !isLoading && fetchError && (
+        {!isLoading && fetchError && (
           <div className="bg-rose-50 border border-rose-200 rounded-xl p-5 text-xs text-rose-900 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
@@ -231,25 +254,32 @@ export const DoctorDiscoveryPage: React.FC = () => {
           </div>
         )}
 
-        {/* Empty State: No Published Doctors in City */}
-        {selectedCity && !isLoading && !fetchError && doctors.length === 0 && (
+        {/* Empty State: No Published Doctors */}
+        {!isLoading && !fetchError && doctors.length === 0 && (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-4 shadow-xs">
             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
               <Stethoscope className="w-6 h-6" />
             </div>
             <h2 className="text-lg font-bold text-slate-900">
-              No Published Practice Listings Found in {selectedCity}
+              {selectedCity
+                ? `No Published Practice Listings Found in ${selectedCity}`
+                : 'No Published Practice Listings Found'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
               {searchQuery || (selectedSpec && selectedSpec !== 'All Specializations')
-                ? 'No published doctors in this city matched your current search filters. Try resetting filters or searching with a different keyword.'
-                : `No independent medical practitioners have published active directory listings in ${selectedCity} yet.`}
+                ? 'No published doctors matched your current search filters. Try resetting filters or searching with a different keyword.'
+                : selectedCity
+                ? `No independent medical practitioners have published active directory listings in ${selectedCity} yet.`
+                : 'No independent medical practitioners have published active directory listings yet.'}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              {(searchQuery || (selectedSpec && selectedSpec !== 'All Specializations')) && (
-                <Button variant="outline" size="sm" onClick={handleClearFilters}>
-                  Clear Search Filters
+              {(searchQuery || (selectedSpec && selectedSpec !== 'All Specializations') || selectedCity) && (
+                <Button variant="outline" size="sm" onClick={() => {
+                  handleCityChange('');
+                  handleClearFilters();
+                }}>
+                  View All Practices
                 </Button>
               )}
               <Link to="/doctor/register">
@@ -262,7 +292,7 @@ export const DoctorDiscoveryPage: React.FC = () => {
         )}
 
         {/* Results Grid: Real Published Doctor Cards */}
-        {selectedCity && !isLoading && !fetchError && doctors.length > 0 && (
+        {!isLoading && !fetchError && doctors.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {doctors.map((doc) => {
               const primaryLocation =

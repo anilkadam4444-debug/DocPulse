@@ -15,9 +15,9 @@ on:
 # Enforce least-privilege permissions
 permissions:
   contents: read
-  id-token: write # Required for Workload Identity Federation (OIDC)
+  id-token: write
 
-# Prevent concurrent production deployments from racing or corrupting state
+# Prevent concurrent production deployments from racing
 concurrency:
   group: firebase-hosting-production
   cancel-in-progress: false
@@ -56,6 +56,8 @@ jobs:
 
       - name: Build production assets
         run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
 
       - name: Verify build output directory
         run: |
@@ -65,26 +67,10 @@ jobs:
           fi
           echo "Build artifact verified: dist/ directory contains $(ls -1 dist | wc -l) entries."
 
-      # Authentication Path 1: Workload Identity Federation (Keyless OIDC - Preferred)
-      - name: Authenticate via Google Cloud Workload Identity Federation
-        id: wif_auth
-        if: "${{ secrets.WIF_PROVIDER != '' && secrets.WIF_SERVICE_ACCOUNT != '' }}"
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-          token_format: 'access_token'
-
-      - name: Deploy to Firebase Hosting via WIF
-        if: "${{ steps.wif_auth.outcome == 'success' }}"
-        run: npx firebase-tools deploy --only hosting --project docpulse-ff978 --non-interactive
-
-      # Authentication Path 2: Dedicated Service Account Secret (Supported Fallback)
-      - name: Deploy to Firebase Hosting via Service Account Key
-        if: "${{ steps.wif_auth.outcome != 'success' }}"
+      - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DOCPULSE_FF978 || secrets.FIREBASE_SERVICE_ACCOUNT }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DOCPULSE_FF978 }}
           channelId: live
           projectId: docpulse-ff978
