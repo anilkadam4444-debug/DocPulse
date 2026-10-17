@@ -14,12 +14,20 @@ import {
   QrCode,
   Building,
   CreditCard,
+  UserPlus,
+  AlertCircle,
+  Phone,
 } from 'lucide-react';
 import { useAuth } from '../doctor-auth/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Appointment, QueueStatus, DailyQueue, SessionOperationalStatus } from '../booking/types';
-import { getDoctorAppointments, updateAppointmentStatus, getNowInKolkata } from '../booking/bookingService';
+import {
+  getDoctorAppointments,
+  updateAppointmentStatus,
+  getNowInKolkata,
+  registerAuthoritativeWalkInAppointment,
+} from '../booking/bookingService';
 import { publishDoctorProfile } from '../doctor-search/searchService';
 import {
   subscribeToDailyQueue,
@@ -87,6 +95,17 @@ export const DoctorDashboard: React.FC = () => {
   // Modal State
   const [modalTargetApt, setModalTargetApt] = useState<Appointment | null>(null);
   const [modalAction, setModalAction] = useState<'complete' | 'no_show' | 'cancel' | null>(null);
+
+  // Walk-In Registration Modal State in Doctor Dashboard
+  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const [isSubmittingWalkIn, setIsSubmittingWalkIn] = useState(false);
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInMobile, setWalkInMobile] = useState('');
+  const [walkInAge, setWalkInAge] = useState('');
+  const [walkInGender, setWalkInGender] = useState<'male' | 'female' | 'other'>('male');
+  const [walkInComplaint, setWalkInComplaint] = useState('');
+  const [walkInError, setWalkInError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   // Subscription & Free Trial state
   const [subscription, setSubscription] = useState<DoctorSubscription | null>(null);
@@ -332,6 +351,84 @@ export const DoctorDashboard: React.FC = () => {
     }
   };
 
+  const handleOpenWalkIn = () => {
+    setWalkInName('');
+    setWalkInMobile('');
+    setWalkInAge('');
+    setWalkInGender('male');
+    setWalkInComplaint('');
+    setWalkInError(null);
+    setDuplicateWarning(null);
+    setIsWalkInModalOpen(true);
+  };
+
+  const handleSubmitWalkIn = async (e?: React.FormEvent, forceDuplicate = false) => {
+    if (e) e.preventDefault();
+    if (!doctorProfile) return;
+
+    if (!walkInName.trim() || !walkInMobile.trim()) {
+      setWalkInError('Patient name and 10-digit mobile number are required.');
+      return;
+    }
+
+    if (walkInMobile.trim().length !== 10) {
+      setWalkInError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
+    // Accidental duplicate prevention check
+    if (!forceDuplicate) {
+      const existingToday = queueAppointments.find(
+        (a) => a.patientMobile === walkInMobile.trim()
+      );
+      if (existingToday) {
+        setDuplicateWarning(
+          `Notice: A patient with mobile ${walkInMobile} (${existingToday.patientName}) is already registered in today's queue with Token ${
+            existingToday.formattedToken || `T-${existingToday.tokenNumber}`
+          }. Click "Confirm & Issue New Token" if this is an intentional second visit.`
+        );
+        return;
+      }
+    }
+
+    setIsSubmittingWalkIn(true);
+    setWalkInError(null);
+    setDuplicateWarning(null);
+
+    const currentLocation = locations.find((l) => l.id === selectedLocationId) || locations[0];
+    const fee = currentLocation.consultationFee || doctorProfile.consultationFee || '500';
+
+    const res = await registerAuthoritativeWalkInAppointment({
+      doctorUid: doctorProfile.uid,
+      locationId: currentLocation.id,
+      locationName: currentLocation.name || currentLocation.clinicName || doctorProfile.clinicName,
+      locationAddress: `${currentLocation.addressLine}, ${currentLocation.locality}`,
+      city: currentLocation.city,
+      consultationFee: fee,
+      durationMinutes: avgDuration,
+      patientName: walkInName,
+      patientMobile: walkInMobile,
+      patientAge: walkInAge ? parseInt(walkInAge, 10) : undefined,
+      patientGender: walkInGender,
+      visitReason: walkInComplaint,
+      registeredBy: `Dr. ${doctorDisplayName}`,
+    });
+
+    setIsSubmittingWalkIn(false);
+
+    if (res.success && res.appointment) {
+      setIsWalkInModalOpen(false);
+      setAlertSent(
+        `Walk-in patient ${res.appointment.patientName} allocated Token ${
+          res.appointment.formattedToken || `T-${res.appointment.tokenNumber}`
+        } (Waiting in Clinic).`
+      );
+      setTimeout(() => setAlertSent(null), 4500);
+    } else {
+      setWalkInError(res.error || 'Failed to register walk-in patient. Please try again.');
+    }
+  };
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     await logout();
@@ -531,6 +628,7 @@ export const DoctorDashboard: React.FC = () => {
                 setAlertSent('Queue synchronization refreshed.');
                 setTimeout(() => setAlertSent(null), 2500);
               }}
+              onRegisterWalkIn={handleOpenWalkIn}
             />
 
             {/* 2. Status Filter Pills */}
@@ -746,6 +844,161 @@ export const DoctorDashboard: React.FC = () => {
         }}
         onConfirm={handleModalConfirm}
       />
+      {/* Walk-In Patient Registration Modal in Doctor Dashboard */}
+      {isWalkInModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 relative my-8 animate-fade-in space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">Register Walk-In Patient</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsWalkInModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {walkInError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{walkInError}</span>
+              </div>
+            )}
+
+            {duplicateWarning && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span className="font-medium leading-relaxed">{duplicateWarning}</span>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setDuplicateWarning(null)}
+                    className="px-3 py-1 rounded-lg border border-amber-300 text-amber-800 text-[11px] font-bold hover:bg-amber-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSubmitWalkIn(undefined, true)}
+                    className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold cursor-pointer"
+                  >
+                    Confirm &amp; Issue New Token
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={(e) => handleSubmitWalkIn(e, false)} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Patient Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Patil"
+                  value={walkInName}
+                  onChange={(e) => setWalkInName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-xs font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  10-Digit Mobile / WhatsApp <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    placeholder="9876543210"
+                    value={walkInMobile}
+                    onChange={(e) => setWalkInMobile(e.target.value.replace(/\D/g, ''))}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-xs font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Age (Years)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={120}
+                    placeholder="35"
+                    value={walkInAge}
+                    onChange={(e) => setWalkInAge(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Gender</label>
+                  <select
+                    value={walkInGender}
+                    onChange={(e) => setWalkInGender(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-xs bg-white"
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Chief Complaint / Reason for Visit
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Fever, Follow-up checkup, Knee pain"
+                  value={walkInComplaint}
+                  onChange={(e) => setWalkInComplaint(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-xs"
+                />
+              </div>
+
+              <div className="p-3 bg-teal-50 rounded-xl border border-teal-200 text-teal-900 text-[11px]">
+                <p className="text-teal-800">
+                  Allocates the next authoritative token in today&apos;s queue and marks the patient status as <strong>Waiting in Clinic</strong>.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsWalkInModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isSubmittingWalkIn}
+                  className="bg-teal-600 hover:bg-teal-700 text-white font-bold"
+                >
+                  Issue Token &amp; Check In
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

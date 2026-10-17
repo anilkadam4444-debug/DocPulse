@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Users,
   Activity,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { PracticeLocation } from '../../../types/auth';
@@ -32,6 +33,7 @@ interface QueueOperationalHeaderProps {
   avgDuration: number;
   onAvgDurationChange: (duration: number) => void;
   onManualRefresh?: () => void;
+  onRegisterWalkIn?: () => void;
 }
 
 export const QueueOperationalHeader: React.FC<QueueOperationalHeaderProps> = ({
@@ -48,6 +50,7 @@ export const QueueOperationalHeader: React.FC<QueueOperationalHeaderProps> = ({
   avgDuration,
   onAvgDurationChange,
   onManualRefresh,
+  onRegisterWalkIn,
 }) => {
   const selectedLocation = locations.find((l) => l.id === selectedLocationId) || locations[0];
 
@@ -159,6 +162,18 @@ export const QueueOperationalHeader: React.FC<QueueOperationalHeaderProps> = ({
           >
             {sessionStatus === 'active' ? 'Pause OPD' : 'Resume OPD'}
           </Button>
+
+          {onRegisterWalkIn && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onRegisterWalkIn}
+              leftIcon={<UserPlus className="w-3.5 h-3.5" />}
+              className="text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              + Walk-In Patient
+            </Button>
+          )}
 
           {onManualRefresh && (
             <button
