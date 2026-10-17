@@ -14,6 +14,7 @@ import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebas
 import { AuthContextType, DoctorTenantProfile } from '../../types/auth';
 import { getFriendlyAuthErrorMessage } from './auth-errors';
 import { publishDoctorProfile } from '../doctor-search/searchService';
+import { ensureDoctorTrial } from '../subscription/subscriptionService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -244,6 +245,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await publishDoctorProfile(uid, profileToPublish, 'published');
         } catch (pubErr) {
           console.warn('Silent public profile listing sync warning on registration:', pubErr);
+        }
+
+        // Initialize 1-month free trial
+        try {
+          await ensureDoctorTrial(uid);
+        } catch (trialErr) {
+          console.warn('Silent free trial initialization notice on registration:', trialErr);
         }
 
         return { success: true };

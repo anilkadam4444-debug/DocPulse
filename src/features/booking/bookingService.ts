@@ -328,6 +328,9 @@ export async function createAuthoritativeAppointment(
     .substring(2, 6)
     .toUpperCase()}`;
 
+  let allocatedTokenNumber = 1;
+  let allocatedFormattedToken = 'T-01';
+
   try {
     // Execute atomic transaction
     await runTransaction(db, async (transaction) => {
@@ -342,11 +345,25 @@ export async function createAuthoritativeAppointment(
         }
       }
 
-      // Step B: Atomically write the slot lock
+      // Step B: Atomically read daily queue counter for doctor, location, and date
+      const queueDocId = `${location.id}_${appointmentDate}`;
+      const dailyQueueDocRef = doc(db, 'doctors', doctorUid, 'dailyQueues', queueDocId);
+      const dailyQueueSnap = await transaction.get(dailyQueueDocRef);
+
+      const currentLastToken = dailyQueueSnap.exists()
+        ? Number(dailyQueueSnap.data().lastTokenNumber || 0)
+        : 0;
+      const nextTokenNumber = currentLastToken + 1;
+      const formattedToken = `T-${nextTokenNumber.toString().padStart(2, '0')}`;
+
+      allocatedTokenNumber = nextTokenNumber;
+      allocatedFormattedToken = formattedToken;
+
+      // Step C: Atomically write the slot lock
       transaction.set(slotDocRef, {
         slotId,
         doctorUid,
-        locationId,
+        locationId: location.id,
         appointmentDate,
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
@@ -355,7 +372,23 @@ export async function createAuthoritativeAppointment(
         createdAt: serverTimestamp(),
       });
 
-      // Step C: Atomically write the appointment record
+      // Step D: Atomically update daily queue counter
+      transaction.set(
+        dailyQueueDocRef,
+        {
+          doctorUid,
+          locationId: location.id,
+          date: appointmentDate,
+          lastTokenNumber: nextTokenNumber,
+          sessionStatus: dailyQueueSnap.exists()
+            ? dailyQueueSnap.data().sessionStatus || 'not_started'
+            : 'not_started',
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // Step E: Atomically write the appointment record
       const appointmentDocRef = doc(db, 'doctors', doctorUid, 'appointments', appointmentId);
       const appointmentPayload = {
         appointmentId,
@@ -375,7 +408,12 @@ export async function createAuthoritativeAppointment(
         timeZone: 'Asia/Kolkata',
         consultationDurationMinutes: durationMinutes,
         consultationFee: authoritativeFee,
-        status: 'confirmed',
+        status: 'scheduled',
+        queueStatus: 'scheduled',
+        tokenNumber: nextTokenNumber,
+        formattedToken,
+        sessionType: selectedSlot.sessionType,
+        queueOrder: nextTokenNumber,
         bookingSource: 'online',
         slotId,
         createdAt: serverTimestamp(),
@@ -404,7 +442,11 @@ export async function createAuthoritativeAppointment(
       timeZone: 'Asia/Kolkata',
       consultationDurationMinutes: durationMinutes,
       consultationFee: authoritativeFee,
-      status: 'confirmed',
+      status: 'scheduled',
+      queueStatus: 'scheduled',
+      tokenNumber: allocatedTokenNumber,
+      formattedToken: allocatedFormattedToken,
+      sessionType: selectedSlot.sessionType,
       bookingSource: 'online',
       slotId,
       createdAt: new Date().toISOString(),

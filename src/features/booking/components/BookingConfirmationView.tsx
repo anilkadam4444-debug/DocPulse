@@ -73,9 +73,9 @@ export const BookingConfirmationView: React.FC<BookingConfirmationViewProps> = (
         </div>
       </div>
 
-      {/* Booking Reference Card */}
+      {/* Booking Reference & Queue Token Card */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-6 sm:p-7 shadow-md relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
           <div>
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
               Booking Reference Number
@@ -88,10 +88,21 @@ export const BookingConfirmationView: React.FC<BookingConfirmationViewProps> = (
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Confirmed
+          <div className="sm:border-l sm:border-slate-700/80 sm:pl-6 flex flex-col justify-center">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Your Daily Queue Token
+            </span>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-2xl sm:text-3xl font-mono font-black text-amber-300 bg-amber-400/10 px-3 py-1 rounded-xl border border-amber-400/30">
+                {appointment.formattedToken || (appointment.tokenNumber ? `T-${appointment.tokenNumber.toString().padStart(2, '0')}` : 'T-01')}
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Confirmed
+              </span>
+            </div>
+            <span className="text-xs text-slate-400 mt-1 block">
+              Atomic sequential token for {appointment.appointmentDate}.
             </span>
           </div>
         </div>

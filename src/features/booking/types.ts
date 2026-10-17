@@ -1,9 +1,22 @@
-export type AppointmentStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'cancelled'
+export type QueueStatus =
+  | 'scheduled'
+  | 'waiting'
+  | 'called'
+  | 'in_consultation'
   | 'completed'
+  | 'cancelled'
   | 'no_show';
+
+export type AppointmentStatus =
+  | 'scheduled'
+  | 'waiting'
+  | 'called'
+  | 'in_consultation'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show'
+  | 'confirmed'
+  | 'pending';
 
 export type BookingSource = 'online' | 'walk_in_qr' | 'receptionist';
 
@@ -26,11 +39,36 @@ export interface Appointment {
   consultationDurationMinutes: number;
   consultationFee: string;
   status: AppointmentStatus;
+  queueStatus?: QueueStatus;
+  tokenNumber?: number;
+  formattedToken?: string;
+  sessionType?: 'session1' | 'session2';
+  checkInTime?: string;
+  calledTime?: string;
+  consultationStartTime?: string;
+  consultationEndTime?: string;
+  estimatedVisitTime?: string;
+  delayMinutes?: number;
+  patientsAhead?: number;
+  queueOrder?: number;
   bookingSource: BookingSource;
   slotId: string;
   createdAt: string;
   updatedAt: string;
   notes?: string;
+}
+
+export type SessionOperationalStatus = 'not_started' | 'active' | 'paused' | 'ended';
+
+export interface DailyQueue {
+  doctorUid: string;
+  locationId: string;
+  date: string;
+  lastTokenNumber: number;
+  currentServingToken?: number | null;
+  sessionStatus: SessionOperationalStatus;
+  sessionStartTime?: string;
+  updatedAt?: unknown;
 }
 
 export interface BookedSlot {

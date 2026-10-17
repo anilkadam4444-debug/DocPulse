@@ -201,18 +201,56 @@ service cloud.firestore {
           incoming().startTime is string && incoming().startTime.size() >= 4 &&
           incoming().endTime is string && incoming().endTime.size() >= 4 &&
           incoming().consultationFee is string &&
-          (incoming().status in ['pending', 'confirmed']) &&
-          incoming().bookingSource == 'online';
+          (incoming().status in ['scheduled', 'confirmed', 'pending']) &&
+          (incoming().bookingSource in ['online', 'walk_in_qr', 'receptionist']);
 
-        // Only the doctor owner can update appointment status (e.g. mark completed, cancelled, no-show)
+        // Only the doctor owner can update queue status (e.g. mark waiting, called, in_consultation, completed, cancelled, no-show)
         allow update: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId &&
           incoming().appointmentId == existing().appointmentId &&
           incoming().doctorUid == existing().doctorUid &&
           incoming().slotId == existing().slotId &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'notes']);
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'status',
+            'queueStatus',
+            'checkInTime',
+            'calledTime',
+            'consultationStartTime',
+            'consultationEndTime',
+            'estimatedVisitTime',
+            'queueOrder',
+            'updatedAt',
+            'notes'
+          ]);
 
         // Prevent client deletion; appointments should be cancelled, not deleted
         allow delete: if false;
+      }
+
+      // Daily Queues Subcollection: Unified daily queue token sequence & OPD session tracker
+      match /dailyQueues/{queueId} {
+        allow get, list: if true;
+        allow create, update: if (isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId) ||
+                                 (incoming().lastTokenNumber is number);
+        allow delete: if false;
+      }
+
+      // Doctor Subscription Subcollection: Authoritative subscription and free trial
+      match /subscription/{subscriptionId} {
+        allow get, list: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId;
+        allow create: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId &&
+                         incoming().doctorUid == doctorId;
+        allow update: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId &&
+                         incoming().doctorUid == existing().doctorUid;
+        allow delete: if false;
+      }
+
+      // Payments Subcollection: Immutable financial transaction audit log
+      match /payments/{paymentId} {
+        allow get, list: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId;
+        allow create: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId &&
+                         incoming().doctorUid == doctorId &&
+                         incoming().paymentId == paymentId;
+        allow update, delete: if false;
       }
 
       // Deletion is blocked from client SDK

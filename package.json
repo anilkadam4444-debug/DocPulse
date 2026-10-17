@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "tsx server.ts",
+    "start": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview --port=3000 --host=0.0.0.0",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node --test src/lib/queue-calculator.test.ts src/features/doctor-registration/validation.test.ts src/features/doctor-auth/auth-errors.test.ts src/features/doctor-settings/settings.test.ts",
+    "test": "node --test src/lib/queue-calculator.test.ts src/features/doctor-registration/validation.test.ts src/features/doctor-auth/auth-errors.test.ts src/features/doctor-settings/settings.test.ts src/features/subscription/subscription.test.ts",
     "deploy:hosting": "firebase deploy --only hosting"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "firebase": "^13.0.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "razorpay": "^2.9.8",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-router-dom": "^7.18.4",

@@ -14,6 +14,7 @@ import {
   Sparkles,
   ShieldCheck,
   Building,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth } from '../doctor-auth/AuthContext';
 import { DoctorSettingsFormState, SettingsTabId } from './types';
@@ -275,7 +276,18 @@ export const DoctorSettingsPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link to="/doctor/subscription">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                leftIcon={<CreditCard className="w-4 h-4 text-amber-500" />}
+                className="text-xs font-semibold"
+              >
+                Subscription &amp; Plans
+              </Button>
+            </Link>
             <Button
               type="button"
               variant="primary"

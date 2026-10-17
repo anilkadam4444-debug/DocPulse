@@ -347,15 +347,29 @@
         "consultationFee": { "type": "string", "description": "Fee in INR" },
         "status": {
           "type": "string",
-          "enum": ["pending", "confirmed", "cancelled", "completed", "no_show"],
-          "description": "Status of the appointment"
+          "enum": ["scheduled", "waiting", "called", "in_consultation", "completed", "cancelled", "no_show", "confirmed", "pending"],
+          "description": "Status of the appointment in the queue lifecycle"
         },
+        "queueStatus": {
+          "type": "string",
+          "enum": ["scheduled", "waiting", "called", "in_consultation", "completed", "cancelled", "no_show"],
+          "description": "Granular queue state"
+        },
+        "tokenNumber": { "type": "number", "description": "Sequential integer queue token number" },
+        "formattedToken": { "type": "string", "description": "Human-readable token display, e.g. T-01" },
         "bookingSource": {
           "type": "string",
           "enum": ["online", "walk_in_qr", "receptionist"],
           "description": "Origin of the appointment"
         },
         "slotId": { "type": "string", "description": "Deterministic slot identifier" },
+        "sessionType": { "type": "string", "enum": ["session1", "session2"], "description": "OPD Consultation session identifier" },
+        "checkInTime": { "type": "string", "format": "date-time", "description": "Timestamp when patient arrived at clinic" },
+        "calledTime": { "type": "string", "format": "date-time", "description": "Timestamp when patient token was called" },
+        "consultationStartTime": { "type": "string", "format": "date-time", "description": "Timestamp when consultation began" },
+        "consultationEndTime": { "type": "string", "format": "date-time", "description": "Timestamp when consultation finished" },
+        "estimatedVisitTime": { "type": "string", "description": "Estimated consultation time e.g. 11:45 AM" },
+        "queueOrder": { "type": "number", "description": "Priority order index for manual reordering" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
@@ -399,6 +413,102 @@
         "endTime",
         "status"
       ]
+    },
+    "DailyQueue": {
+      "title": "DailyQueue",
+      "description": "Atomic daily queue tracker and operational session status per doctor, location, and date",
+      "type": "object",
+      "properties": {
+        "doctorUid": { "type": "string", "description": "Doctor UID" },
+        "locationId": { "type": "string", "description": "Practice Location ID" },
+        "date": { "type": "string", "description": "Local consultation date YYYY-MM-DD" },
+        "lastTokenNumber": { "type": "number", "description": "Last sequentially allocated token number" },
+        "currentServingToken": { "type": "number", "description": "Token currently inside consultation room" },
+        "sessionStatus": {
+          "type": "string",
+          "enum": ["not_started", "active", "paused", "ended"],
+          "description": "OPD doctor consultation session status"
+        },
+        "sessionStartTime": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "doctorUid",
+        "locationId",
+        "date",
+        "lastTokenNumber",
+        "sessionStatus"
+      ]
+    },
+    "DoctorSubscription": {
+      "title": "DoctorSubscription",
+      "description": "Authoritative subscription record for an individual doctor practice",
+      "type": "object",
+      "properties": {
+        "doctorUid": { "type": "string", "description": "Doctor user UID" },
+        "planId": {
+          "type": "string",
+          "enum": ["monthly", "quarterly", "half_yearly", "yearly", "free_trial"],
+          "description": "Subscribed plan identifier"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["trialing", "active", "past_due", "expired", "cancelled", "suspended"],
+          "description": "Authoritative lifecycle status"
+        },
+        "trialStartAt": { "type": "string", "format": "date-time", "description": "Start of free trial period" },
+        "trialEndAt": { "type": "string", "format": "date-time", "description": "End of 1-month free trial period" },
+        "currentPeriodStartAt": { "type": "string", "format": "date-time", "description": "Start of current billing cycle" },
+        "currentPeriodEndAt": { "type": "string", "format": "date-time", "description": "Expiration date of current subscription" },
+        "lastPaymentId": { "type": "string", "description": "Reference ID of latest payment" },
+        "lastPaymentStatus": { "type": "string", "enum": ["captured", "failed", "pending"] },
+        "lastPaymentAmountPaise": { "type": "number", "description": "Amount in integer paise" },
+        "autoRenew": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "doctorUid",
+        "planId",
+        "status",
+        "trialStartAt",
+        "trialEndAt",
+        "currentPeriodEndAt"
+      ]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Immutable financial audit record for doctor subscription transactions",
+      "type": "object",
+      "properties": {
+        "paymentId": { "type": "string", "description": "Unique payment identifier" },
+        "doctorUid": { "type": "string", "description": "Doctor UID" },
+        "orderId": { "type": "string", "description": "Gateway order ID" },
+        "planId": { "type": "string", "enum": ["monthly", "quarterly", "half_yearly", "yearly"] },
+        "amountPaise": { "type": "number", "description": "Paid amount in paise" },
+        "amountInr": { "type": "number", "description": "Paid amount in INR" },
+        "currency": { "type": "string", "description": "Currency code e.g. INR" },
+        "paymentMethod": { "type": "string", "description": "Payment instrument e.g. upi" },
+        "upiApp": { "type": "string", "description": "UPI application e.g. Google Pay, PhonePe, Paytm, BHIM" },
+        "vpa": { "type": "string", "description": "Masked or sanitized VPA" },
+        "status": { "type": "string", "enum": ["captured", "failed", "pending"] },
+        "razorpayPaymentId": { "type": "string" },
+        "razorpayOrderId": { "type": "string" },
+        "razorpaySignature": { "type": "string" },
+        "paidAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "paymentId",
+        "doctorUid",
+        "orderId",
+        "planId",
+        "amountPaise",
+        "amountInr",
+        "currency",
+        "paymentMethod",
+        "status"
+      ]
     }
   },
   "firestore": {
@@ -417,6 +527,18 @@
     "/doctors/{doctorId}/bookedSlots/{slotId}": {
       "schema": "BookedSlot",
       "description": "Authoritative slot reservation documents for atomic double-booking prevention"
+    },
+    "/doctors/{doctorId}/dailyQueues/{queueId}": {
+      "schema": "DailyQueue",
+      "description": "Atomic daily queue counter and operational OPD session tracking"
+    },
+    "/doctors/{doctorId}/subscription/{subscriptionId}": {
+      "schema": "DoctorSubscription",
+      "description": "Authoritative doctor subscription state and trial tracker"
+    },
+    "/doctors/{doctorId}/payments/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Immutable payment audit log and UPI transactions"
     }
   }
 }

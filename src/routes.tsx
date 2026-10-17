@@ -9,6 +9,7 @@ import { DoctorRegisterWizard } from './features/doctor-registration/DoctorRegis
 import { DoctorLoginPage } from './features/doctor-auth/DoctorLoginPage';
 import { DoctorDashboard } from './features/doctor-dashboard/DoctorDashboard';
 import { DoctorSettingsPage } from './features/doctor-settings/DoctorSettingsPage';
+import { DoctorSubscriptionPage } from './features/subscription/DoctorSubscriptionPage';
 import { NotFoundPage } from './features/not-found/NotFoundPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -32,6 +33,14 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute>
               <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="doctor/subscription"
+          element={
+            <ProtectedRoute>
+              <DoctorSubscriptionPage />
             </ProtectedRoute>
           }
         />
