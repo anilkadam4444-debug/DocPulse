@@ -10,6 +10,8 @@ import { DoctorLoginPage } from './features/doctor-auth/DoctorLoginPage';
 import { DoctorDashboard } from './features/doctor-dashboard/DoctorDashboard';
 import { DoctorSettingsPage } from './features/doctor-settings/DoctorSettingsPage';
 import { DoctorSubscriptionPage } from './features/subscription/DoctorSubscriptionPage';
+import { ReceptionistLoginPage } from './features/receptionist/ReceptionistLoginPage';
+import { ReceptionistDashboardPage } from './features/receptionist/ReceptionistDashboardPage';
 import { NotFoundPage } from './features/not-found/NotFoundPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -24,6 +26,14 @@ export const AppRoutes: React.FC = () => {
         <Route path="doctors" element={<DoctorDiscoveryPage />} />
         <Route path="doctors/:doctorId" element={<PublicDoctorProfilePage />} />
         <Route path="doctors/:doctorId/book" element={<PatientBookingPage />} />
+
+        {/* Dedicated Direct QR Booking Routes */}
+        <Route path="book/:doctorId" element={<PatientBookingPage />} />
+        <Route path="book/:doctorId/:locationId" element={<PatientBookingPage />} />
+
+        {/* Receptionist Portal Routes */}
+        <Route path="reception/login" element={<ReceptionistLoginPage />} />
+        <Route path="reception/dashboard" element={<ReceptionistDashboardPage />} />
 
         {/* Doctor Portal Routes */}
         <Route path="doctor/register" element={<DoctorRegisterWizard />} />

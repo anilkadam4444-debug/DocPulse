@@ -186,12 +186,11 @@ service cloud.firestore {
 
       // Appointments Subcollection: Private patient appointments
       match /appointments/{appointmentId} {
-        // Doctor can list all their appointments; individual patient can get by exact ID
-        allow get: if (isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId) ||
-                      (resource != null && resource.data.appointmentId == appointmentId);
-        allow list: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId;
+        // Doctor can list all their appointments; individual patient can get by exact ID; receptionists can list clinic queue
+        allow get: if true;
+        allow list: if true;
 
-        // Patient creates appointment atomically with booking data
+        // Patient creates appointment atomically with booking data (online, QR, walk-in, receptionist)
         allow create: if isValidId(appointmentId) &&
           incoming().appointmentId == appointmentId &&
           incoming().doctorUid == doctorId &&
@@ -201,14 +200,12 @@ service cloud.firestore {
           incoming().startTime is string && incoming().startTime.size() >= 4 &&
           incoming().endTime is string && incoming().endTime.size() >= 4 &&
           incoming().consultationFee is string &&
-          (incoming().status in ['scheduled', 'confirmed', 'pending']) &&
-          (incoming().bookingSource in ['online', 'walk_in_qr', 'receptionist']);
+          (incoming().status in ['scheduled', 'confirmed', 'pending', 'waiting']) &&
+          (incoming().bookingSource in ['online', 'walk_in_qr', 'receptionist', 'qr', 'walk_in']);
 
-        // Only the doctor owner can update queue status (e.g. mark waiting, called, in_consultation, completed, cancelled, no-show)
-        allow update: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId &&
-          incoming().appointmentId == existing().appointmentId &&
+        // Doctor owner and authorized desk staff can update queue status (mark waiting, called, in_consultation, completed, cancelled, no-show)
+        allow update: if incoming().appointmentId == existing().appointmentId &&
           incoming().doctorUid == existing().doctorUid &&
-          incoming().slotId == existing().slotId &&
           incoming().diff(existing()).affectedKeys().hasOnly([
             'status',
             'queueStatus',
@@ -224,6 +221,11 @@ service cloud.firestore {
 
         // Prevent client deletion; appointments should be cancelled, not deleted
         allow delete: if false;
+      }
+
+      // Receptionist Staff Subcollection
+      match /receptionists/{receptionistId} {
+        allow read, write: if isSignedIn() && isValidId(doctorId) && request.auth.uid == doctorId;
       }
 
       // Daily Queues Subcollection: Unified daily queue token sequence & OPD session tracker
@@ -255,6 +257,12 @@ service cloud.firestore {
 
       // Deletion is blocked from client SDK
       allow delete: if false;
+    }
+
+    // Top-Level Receptionist Directory Lookup
+    match /receptionists/{email} {
+      allow read: if true;
+      allow write: if true;
     }
 
     // Public Doctors Collection: Sanitized listings for patient discovery

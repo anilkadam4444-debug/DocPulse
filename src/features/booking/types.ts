@@ -18,7 +18,7 @@ export type AppointmentStatus =
   | 'confirmed'
   | 'pending';
 
-export type BookingSource = 'online' | 'walk_in_qr' | 'receptionist';
+export type BookingSource = 'online' | 'walk_in_qr' | 'receptionist' | 'qr' | 'walk_in';
 
 export interface Appointment {
   appointmentId: string;
@@ -31,6 +31,8 @@ export interface Appointment {
   patientName: string;
   patientMobile: string;
   patientEmail?: string;
+  patientAge?: number;
+  patientGender?: 'male' | 'female' | 'other';
   visitReason?: string;
   appointmentDate: string; // YYYY-MM-DD
   startTime: string; // HH:mm
@@ -101,8 +103,11 @@ export interface BookingFormData {
   selectedSlot: CandidateTimeSlot | null;
   patientName: string;
   patientMobile: string;
-  patientEmail: string;
-  visitReason: string;
+  patientEmail?: string;
+  patientAge?: number;
+  patientGender?: 'male' | 'female' | 'other';
+  visitReason?: string;
+  bookingSource?: BookingSource;
 }
 
 export interface BookingSubmissionResult {

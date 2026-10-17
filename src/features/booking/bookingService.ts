@@ -389,8 +389,9 @@ export async function createAuthoritativeAppointment(
       );
 
       // Step E: Atomically write the appointment record
+      const source = bookingData.bookingSource || 'online';
       const appointmentDocRef = doc(db, 'doctors', doctorUid, 'appointments', appointmentId);
-      const appointmentPayload = {
+      const appointmentPayload: Record<string, unknown> = {
         appointmentId,
         bookingReference,
         doctorUid,
@@ -414,11 +415,18 @@ export async function createAuthoritativeAppointment(
         formattedToken,
         sessionType: selectedSlot.sessionType,
         queueOrder: nextTokenNumber,
-        bookingSource: 'online',
+        bookingSource: source,
         slotId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
+
+      if (bookingData.patientAge !== undefined) {
+        appointmentPayload.patientAge = bookingData.patientAge;
+      }
+      if (bookingData.patientGender !== undefined) {
+        appointmentPayload.patientGender = bookingData.patientGender;
+      }
 
       transaction.set(appointmentDocRef, appointmentPayload);
     });
@@ -435,6 +443,8 @@ export async function createAuthoritativeAppointment(
       patientName: patientName.trim(),
       patientMobile: patientMobile.trim(),
       patientEmail: bookingData.patientEmail?.trim() || '',
+      patientAge: bookingData.patientAge,
+      patientGender: bookingData.patientGender,
       visitReason: bookingData.visitReason?.trim() || '',
       appointmentDate,
       startTime: selectedSlot.startTime,
@@ -447,7 +457,7 @@ export async function createAuthoritativeAppointment(
       tokenNumber: allocatedTokenNumber,
       formattedToken: allocatedFormattedToken,
       sessionType: selectedSlot.sessionType,
-      bookingSource: 'online',
+      bookingSource: bookingData.bookingSource || 'online',
       slotId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -562,3 +572,172 @@ export async function updateAppointmentStatus(
     return { success: false, error: rawMsg };
   }
 }
+
+/**
+ * Registers an in-clinic walk-in patient directly into the unified queue.
+ * Allocates the next authoritative token number in atomic transaction,
+ * and marks the patient status as 'waiting' in the clinic with checkInTime recorded.
+ */
+export async function registerAuthoritativeWalkInAppointment(params: {
+  doctorUid: string;
+  locationId: string;
+  locationName: string;
+  locationAddress: string;
+  city: string;
+  consultationFee: string;
+  durationMinutes?: number;
+  patientName: string;
+  patientMobile: string;
+  patientAge?: number;
+  patientGender?: 'male' | 'female' | 'other';
+  visitReason?: string;
+  registeredBy?: string;
+}): Promise<BookingSubmissionResult> {
+  const {
+    doctorUid,
+    locationId,
+    locationName,
+    locationAddress,
+    city,
+    consultationFee,
+    durationMinutes = 15,
+    patientName,
+    patientMobile,
+    patientAge,
+    patientGender,
+    visitReason,
+    registeredBy,
+  } = params;
+
+  const { dateStr: todayKolkata, timeStr: nowTime } = getNowInKolkata();
+  const appointmentId = `apt_walkin_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const bookingReference = `DP-WI-${todayKolkata.replace(/-/g, '').slice(2)}-${Math.random()
+    .toString(36)
+    .substring(2, 6)
+    .toUpperCase()}`;
+
+  let allocatedTokenNumber = 1;
+  let allocatedFormattedToken = 'T-01';
+  const slotId = `slot_walkin_${todayKolkata}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      // 1. Read daily queue counter for doctor, location, and today's date
+      const queueDocId = `${locationId}_${todayKolkata}`;
+      const dailyQueueDocRef = doc(db, 'doctors', doctorUid, 'dailyQueues', queueDocId);
+      const dailyQueueSnap = await transaction.get(dailyQueueDocRef);
+
+      const currentLastToken = dailyQueueSnap.exists()
+        ? Number(dailyQueueSnap.data().lastTokenNumber || 0)
+        : 0;
+      const nextTokenNumber = currentLastToken + 1;
+      const formattedToken = `T-${nextTokenNumber.toString().padStart(2, '0')}`;
+
+      allocatedTokenNumber = nextTokenNumber;
+      allocatedFormattedToken = formattedToken;
+
+      // 2. Write daily queue counter
+      transaction.set(
+        dailyQueueDocRef,
+        {
+          doctorUid,
+          locationId,
+          date: todayKolkata,
+          lastTokenNumber: nextTokenNumber,
+          sessionStatus: dailyQueueSnap.exists()
+            ? dailyQueueSnap.data().sessionStatus || 'active'
+            : 'active',
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // 3. Atomically write the appointment record
+      const appointmentDocRef = doc(db, 'doctors', doctorUid, 'appointments', appointmentId);
+      const appointmentPayload: Record<string, unknown> = {
+        appointmentId,
+        bookingReference,
+        doctorUid,
+        locationId,
+        locationName,
+        locationAddress,
+        city,
+        patientName: patientName.trim(),
+        patientMobile: patientMobile.trim(),
+        patientEmail: '',
+        visitReason: visitReason?.trim() || 'Walk-in Consultation',
+        appointmentDate: todayKolkata,
+        startTime: nowTime,
+        endTime: addMinutesToTime(nowTime, durationMinutes),
+        timeZone: 'Asia/Kolkata',
+        consultationDurationMinutes: durationMinutes,
+        consultationFee,
+        status: 'waiting',
+        queueStatus: 'waiting',
+        checkInTime: new Date().toISOString(),
+        tokenNumber: nextTokenNumber,
+        formattedToken,
+        queueOrder: nextTokenNumber,
+        bookingSource: 'walk_in',
+        slotId,
+        notes: registeredBy ? `Registered at clinic desk by ${registeredBy}` : 'Registered at clinic desk',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      if (patientAge !== undefined) {
+        appointmentPayload.patientAge = patientAge;
+      }
+      if (patientGender !== undefined) {
+        appointmentPayload.patientGender = patientGender;
+      }
+
+      transaction.set(appointmentDocRef, appointmentPayload);
+    });
+
+    const confirmedAppointment: Appointment = {
+      appointmentId,
+      bookingReference,
+      doctorUid,
+      locationId,
+      locationName,
+      locationAddress,
+      city,
+      patientName: patientName.trim(),
+      patientMobile: patientMobile.trim(),
+      patientAge,
+      patientGender,
+      visitReason: visitReason?.trim() || 'Walk-in Consultation',
+      appointmentDate: todayKolkata,
+      startTime: nowTime,
+      endTime: addMinutesToTime(nowTime, durationMinutes),
+      timeZone: 'Asia/Kolkata',
+      consultationDurationMinutes: durationMinutes,
+      consultationFee,
+      status: 'waiting',
+      queueStatus: 'waiting',
+      checkInTime: new Date().toISOString(),
+      tokenNumber: allocatedTokenNumber,
+      formattedToken: allocatedFormattedToken,
+      bookingSource: 'walk_in',
+      slotId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      notes: registeredBy ? `Registered at clinic desk by ${registeredBy}` : 'Registered at clinic desk',
+    };
+
+    return {
+      success: true,
+      appointment: confirmedAppointment,
+    };
+  } catch (err: unknown) {
+    console.error('Firestore walk-in booking error:', err);
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      error: `Walk-in registration error: ${rawMsg}`,
+      errorCode: 'NETWORK_ERROR',
+    };
+  }
+}
+

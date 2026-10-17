@@ -38,6 +38,8 @@ import {
   ensureDoctorTrial,
 } from '../subscription/subscriptionService';
 import { TrialStatusBanner } from '../subscription/components/TrialStatusBanner';
+import { ClinicQrManagement } from '../qr-booking/components/ClinicQrManagement';
+import { DoctorStaffManager } from '../receptionist/components/DoctorStaffManager';
 
 export const DoctorDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -89,8 +91,8 @@ export const DoctorDashboard: React.FC = () => {
   // Subscription & Free Trial state
   const [subscription, setSubscription] = useState<DoctorSubscription | null>(null);
 
-  // View tabs (Queue vs All Bookings history)
-  const [dashboardTab, setDashboardTab] = useState<'queue' | 'all_appointments'>('queue');
+  // View tabs (Queue vs All Bookings history vs QR Codes vs Staff)
+  const [dashboardTab, setDashboardTab] = useState<'queue' | 'all_appointments' | 'qr_codes' | 'receptionists'>('queue');
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
 
@@ -477,10 +479,39 @@ export const DoctorDashboard: React.FC = () => {
               {allAppointments.length || queueAppointments.length}
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setDashboardTab('qr_codes')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              dashboardTab === 'qr_codes'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <QrCode className="w-3.5 h-3.5 text-teal-400" />
+            <span>Clinic QR Codes &amp; Standees</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-teal-800 text-teal-200 font-mono">
+              {locations.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDashboardTab('receptionists')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              dashboardTab === 'receptionists'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <Building className="w-3.5 h-3.5 text-amber-400" />
+            <span>Receptionists &amp; Desk Staff</span>
+          </button>
         </div>
 
         {/* TAB 1: Unified Queue Console */}
-        {dashboardTab === 'queue' ? (
+        {dashboardTab === 'queue' && (
           <div className="space-y-5">
             {/* 1. Operational Controls Header */}
             <QueueOperationalHeader
@@ -530,8 +561,10 @@ export const DoctorDashboard: React.FC = () => {
               }}
             />
           </div>
-        ) : (
-          /* TAB 2: All Booked Appointments Table */
+        )}
+
+        {/* TAB 2: All Booked Appointments Table */}
+        {dashboardTab === 'all_appointments' && (
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
@@ -649,6 +682,22 @@ export const DoctorDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* TAB 3: Clinic QR Codes & Standees */}
+        {dashboardTab === 'qr_codes' && doctorProfile && (
+          <ClinicQrManagement
+            doctorProfile={doctorProfile}
+            locations={locations}
+          />
+        )}
+
+        {/* TAB 4: Receptionist & Staff Desk Manager */}
+        {dashboardTab === 'receptionists' && doctorProfile && (
+          <DoctorStaffManager
+            doctorProfile={doctorProfile}
+            locations={locations}
+          />
         )}
 
         {/* Practice Architecture Notes */}

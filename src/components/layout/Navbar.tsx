@@ -123,6 +123,13 @@ export const Navbar: React.FC = () => {
             </div>
           ) : (
             <>
+              <Link
+                to="/reception/login"
+                className="hidden xl:inline-flex text-xs text-slate-500 hover:text-slate-900 font-semibold px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                title="Clinic Reception Desk Login"
+              >
+                Reception Desk
+              </Link>
               <Link to="/doctor/login">
                 <Button variant="outline" size="sm" className="hidden lg:inline-flex">
                   Doctor Sign In

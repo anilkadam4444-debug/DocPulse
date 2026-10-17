@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Stethoscope,
   ShieldCheck,
+  QrCode,
 } from 'lucide-react';
 import { getPublicDoctorById } from '../doctor-search/searchService';
 import { PublicDoctorProfile, PublicPracticeLocation } from '../../types/public-doctor';
@@ -34,16 +35,26 @@ const STEPS = [
 ];
 
 export const PatientBookingPage: React.FC = () => {
-  const { doctorId } = useParams<{ doctorId: string }>();
+  const { doctorId, locationId: routeLocationId } = useParams<{
+    doctorId: string;
+    locationId?: string;
+  }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const preselectedLocationId = searchParams.get('locationId') || '';
+  const isQrBooking = Boolean(
+    routeLocationId ||
+      searchParams.get('source') === 'qr' ||
+      (typeof window !== 'undefined' && window.location.pathname.startsWith('/book/'))
+  );
+
+  const preselectedLocationId = routeLocationId || searchParams.get('locationId') || '';
   const preselectedDate = searchParams.get('date') || '';
 
   const [doctor, setDoctor] = useState<PublicDoctorProfile | null>(null);
   const [isLoadingDoctor, setIsLoadingDoctor] = useState<boolean>(true);
   const [doctorError, setDoctorError] = useState<string | null>(null);
+  const [inactiveLocationWarning, setInactiveLocationWarning] = useState<string | null>(null);
 
   // Wizard Step State
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -82,9 +93,20 @@ export const PatientBookingPage: React.FC = () => {
         } else {
           setDoctor(data);
 
-          // If preselected location doesn't exist, default to primary or first active
-          const activeLocs = data.locations.filter((l) => l.isActive);
+          // Check if specific requested location exists
+          const allLocs = data.locations || [];
+          const requestedLoc = allLocs.find((l) => l.id === preselectedLocationId);
+
+          if (requestedLoc && requestedLoc.isActive === false) {
+            setInactiveLocationWarning(
+              `Notice: The clinic "${requestedLoc.name}" is temporarily not accepting appointments. Please choose another active clinic location below.`
+            );
+          }
+
+          // Filter active locations
+          const activeLocs = allLocs.filter((l) => l.isActive !== false);
           const found = activeLocs.find((l) => l.id === preselectedLocationId);
+
           if (found) {
             setSelectedLocationId(found.id);
             // Can jump directly to step 2 if location is already set
@@ -187,6 +209,7 @@ export const PatientBookingPage: React.FC = () => {
       patientMobile,
       patientEmail,
       visitReason,
+      bookingSource: isQrBooking ? 'qr' : 'online',
     };
 
     const result = await createAuthoritativeAppointment(bookingData, doctor);
@@ -279,6 +302,42 @@ export const PatientBookingPage: React.FC = () => {
         ) : (
           /* Booking Stepper & Flow */
           <div className="space-y-6">
+            {/* Inactive Location Alert if patient opened an inactive clinic URL */}
+            {inactiveLocationWarning && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-3 shadow-2xs">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span className="font-medium">{inactiveLocationWarning}</span>
+              </div>
+            )}
+
+            {/* Clinic QR Booking Banner */}
+            {isQrBooking && selectedLocation && (
+              <div className="bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-sm border border-teal-800/40">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-teal-800/60 text-teal-300 flex items-center justify-center shrink-0 border border-teal-700/50">
+                    <QrCode className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">
+                        Clinic QR Scan Booking
+                      </span>
+                      <span className="text-slate-600">·</span>
+                      <span className="text-xs text-emerald-400 font-semibold">
+                        Instant Queue Token
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-white">
+                      {selectedLocation.name} · {selectedLocation.locality}, {selectedLocation.city}
+                    </p>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex px-3 py-1 rounded-full bg-teal-800/80 text-teal-200 text-xs font-semibold">
+                  Preselected Clinic
+                </span>
+              </div>
+            )}
+
             {/* Stepper Indicator */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs">
               <div className="flex items-center justify-between">
